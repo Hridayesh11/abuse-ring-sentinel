@@ -1,0 +1,69 @@
+# =========================
+# Python
+# =========================
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+
+# =========================
+# Environment variables
+# =========================
+
+.env
+
+# =========================
+# IDE
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Generated datasets
+# =========================
+
+data/datasets/*
+!data/datasets/.gitkeep
+
+# =========================
+# Generated model artifacts
+# =========================
+
+models/artifacts/
+
+# =========================
+# Logs
+# =========================
+
+*.log
+logs/
+
+# =========================
+# Testing / coverage
+# =========================
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
