@@ -1,13 +1,20 @@
+import networkx as nx
+
 from data.generate_accounts import generate_accounts
 from data.generate_transactions import Transaction
 from features.behavioral import (
     BehavioralFeatures,
     calculate_behavioral_features,
 )
+from features.graph_features import (
+    GraphFeatures,
+    calculate_graph_features,
+)
 from features.temporal import (
     TemporalFeatures,
     calculate_temporal_features,
 )
+from graph.communities import detect_communities
 
 # ============================================================
 # Behavioral feature tests
@@ -445,3 +452,266 @@ def test_temporal_features_return_expected_type():
 
     for feature in features:
         assert isinstance(feature, TemporalFeatures)
+
+# ============================================================
+# Graph feature tests
+# ============================================================
+
+def test_graph_features_return_one_result_per_account():
+    accounts = generate_accounts(5)
+
+    graph = nx.DiGraph()
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    assert len(features) == 5
+
+
+def test_graph_features_return_correct_account_ids():
+    accounts = generate_accounts(5)
+
+    graph = nx.DiGraph()
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    feature_account_ids = {
+        feature.account_id
+        for feature in features
+    }
+
+    account_ids = {
+        account.account_id
+        for account in accounts
+    }
+
+    assert feature_account_ids == account_ids
+
+
+def test_graph_features_for_missing_account_are_zero():
+    accounts = generate_accounts(2)
+
+    graph = nx.DiGraph()
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    for feature in features:
+        assert feature.in_degree == 0
+        assert feature.out_degree == 0
+        assert feature.total_degree == 0
+        assert feature.reciprocity == 0.0
+        assert feature.community_size == 0
+        assert feature.internal_degree == 0
+
+
+def test_graph_features_calculate_degrees():
+    accounts = generate_accounts(3)
+
+    account_a = accounts[0]
+    account_b = accounts[1]
+    account_c = accounts[2]
+
+    graph = nx.DiGraph()
+
+    graph.add_edge(account_a.account_id, account_b.account_id)
+    graph.add_edge(account_a.account_id, account_c.account_id)
+    graph.add_edge(account_c.account_id, account_a.account_id)
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    account_a_features = next(
+        feature
+        for feature in features
+        if feature.account_id == account_a.account_id
+    )
+
+    assert account_a_features.out_degree == 2
+    assert account_a_features.in_degree == 1
+    assert account_a_features.total_degree == 3
+
+
+def test_graph_features_calculate_reciprocity():
+    accounts = generate_accounts(2)
+
+    account_a = accounts[0]
+    account_b = accounts[1]
+
+    graph = nx.DiGraph()
+
+    graph.add_edge(
+        account_a.account_id,
+        account_b.account_id,
+    )
+
+    graph.add_edge(
+        account_b.account_id,
+        account_a.account_id,
+    )
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    for feature in features:
+        assert feature.reciprocity == 1.0
+
+
+def test_graph_features_calculate_community_size():
+    accounts = generate_accounts(3)
+
+    account_a = accounts[0]
+    account_b = accounts[1]
+    account_c = accounts[2]
+
+    graph = nx.DiGraph()
+
+    graph.add_edge(
+        account_a.account_id,
+        account_b.account_id,
+    )
+
+    graph.add_edge(
+        account_b.account_id,
+        account_c.account_id,
+    )
+
+    communities = [
+        {
+            account_a.account_id,
+            account_b.account_id,
+            account_c.account_id,
+        }
+    ]
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=communities,
+    )
+
+    for feature in features:
+        assert feature.community_size == 3
+
+
+def test_graph_features_calculate_internal_degree():
+    accounts = generate_accounts(3)
+
+    account_a = accounts[0]
+    account_b = accounts[1]
+    account_c = accounts[2]
+
+    graph = nx.DiGraph()
+
+    graph.add_edge(
+        account_a.account_id,
+        account_b.account_id,
+    )
+
+    graph.add_edge(
+        account_b.account_id,
+        account_c.account_id,
+    )
+
+    communities = [
+        {
+            account_a.account_id,
+            account_b.account_id,
+            account_c.account_id,
+        }
+    ]
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=communities,
+    )
+
+    account_b_features = next(
+        feature
+        for feature in features
+        if feature.account_id == account_b.account_id
+    )
+
+    assert account_b_features.internal_degree == 2
+
+
+def test_graph_features_work_with_detected_communities():
+    accounts = generate_accounts(3)
+
+    account_a = accounts[0]
+    account_b = accounts[1]
+    account_c = accounts[2]
+
+    graph = nx.DiGraph()
+
+    graph.add_edge(
+        account_a.account_id,
+        account_b.account_id,
+    )
+
+    graph.add_edge(
+        account_b.account_id,
+        account_c.account_id,
+    )
+
+    communities = detect_communities(graph)
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=communities,
+    )
+
+    for feature in features:
+        assert feature.community_size == 3
+
+
+def test_graph_features_return_expected_type():
+    accounts = generate_accounts(3)
+
+    graph = nx.DiGraph()
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    for feature in features:
+        assert isinstance(feature, GraphFeatures)
+
+
+def test_graph_features_are_sorted_by_account_id():
+    accounts = generate_accounts(5)
+
+    graph = nx.DiGraph()
+
+    features = calculate_graph_features(
+        accounts=accounts,
+        graph=graph,
+        communities=[],
+    )
+
+    account_ids = [
+        feature.account_id
+        for feature in features
+    ]
+
+    assert account_ids == sorted(account_ids)
