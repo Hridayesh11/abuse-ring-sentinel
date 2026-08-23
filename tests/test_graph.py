@@ -2,18 +2,17 @@ import networkx as nx
 import pytest
 
 from data.generate_accounts import generate_accounts
-from data.generate_transactions import generate_transactions
 from data.generate_rings import (
     generate_abuse_ring,
     generate_ring_transactions,
 )
+from data.generate_transactions import generate_transactions
 from graph.builder import build_transaction_graph
 from graph.communities import detect_communities
 from graph.ring_detection import (
     RingDetectionResult,
     detect_ring,
 )
-
 
 # ============================================================
 # Graph construction tests

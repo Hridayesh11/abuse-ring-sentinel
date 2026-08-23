@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import random
 
 from data.generate_accounts import Account
 

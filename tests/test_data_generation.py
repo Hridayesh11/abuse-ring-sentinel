@@ -1,10 +1,9 @@
 from data.generate_accounts import generate_accounts
-from data.generate_transactions import generate_transactions
 from data.generate_rings import (
     generate_abuse_ring,
     generate_ring_transactions,
 )
-
+from data.generate_transactions import generate_transactions
 
 # ============================================================
 # Account generation tests

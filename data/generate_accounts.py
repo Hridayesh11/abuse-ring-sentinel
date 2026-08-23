@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from faker import Faker
 
@@ -13,7 +12,7 @@ class Account:
     email: str
     country: str
     created_at: str
-    ring_id: Optional[str] = None
+    ring_id: str | None = None
 
 
 def generate_accounts(
