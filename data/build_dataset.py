@@ -7,6 +7,10 @@ import pandas as pd
 from faker import Faker
 
 from data.generate_accounts import generate_accounts
+from data.generate_entities import (
+    generate_shared_entities,
+    inject_ring_entities,
+)
 from data.generate_rings import (
     AbuseRing,
     generate_abuse_ring,
@@ -14,6 +18,7 @@ from data.generate_rings import (
 )
 from data.generate_transactions import generate_transactions
 from features.behavioral import calculate_behavioral_features
+from features.entity_features import calculate_entity_features
 from features.graph_features import calculate_graph_features
 from features.temporal import calculate_temporal_features
 from graph.builder import build_transaction_graph
@@ -109,6 +114,15 @@ def build_dataset(
         faker=faker,
     )
 
+        # --------------------------------------------------------
+    # 2. Generate shared identity entities
+    # --------------------------------------------------------
+
+    entities = generate_shared_entities(
+        accounts=accounts,
+        seed=seed,
+    )
+
     # --------------------------------------------------------
     # 2. Generate normal background transactions
     # --------------------------------------------------------
@@ -139,6 +153,18 @@ def build_dataset(
 
         rings.append(ring)
 
+        # --------------------------------------------------------
+    # Inject coordinated identity signals into abuse rings
+    # --------------------------------------------------------
+
+    for ring_index, ring in enumerate(rings):
+        entities = inject_ring_entities(
+            entities=entities,
+            ring_account_ids=ring.account_ids,
+            ring_id=ring.ring_id,
+            seed=seed + ring_index,
+        )
+
     # --------------------------------------------------------
     # 4. Generate coordinated ring transactions
     # --------------------------------------------------------
@@ -149,12 +175,13 @@ def build_dataset(
         normal_transaction_count + 1
     )
 
-    for ring in rings:
+    for ring_index, ring in enumerate(rings):
         transactions = generate_ring_transactions(
-            ring=ring,
-            count=ring_transaction_count,
-            start_transaction_id=next_transaction_id,
-        )
+        ring=ring,
+        count=ring_transaction_count,
+        start_transaction_id=next_transaction_id,
+        seed=seed + ring_index,
+    )
 
         ring_transactions.extend(transactions)
 
@@ -204,6 +231,10 @@ def build_dataset(
         graph=graph,
         communities=communities,
     )
+    entity_features = calculate_entity_features(
+    accounts=accounts,
+    entities=entities,
+    )
 
     # --------------------------------------------------------
     # 9. Convert feature objects into dictionaries
@@ -223,6 +254,10 @@ def build_dataset(
         feature.account_id: asdict(feature)
         for feature in graph_features
     }
+    entity_by_account = {
+    feature.account_id: asdict(feature)
+    for feature in entity_features
+    }
 
     # --------------------------------------------------------
     # 10. Build ground-truth abuse labels
@@ -239,7 +274,7 @@ def build_dataset(
     # 11. Assemble account-level dataset
     # --------------------------------------------------------
 
-    rows: list[dict] = []
+        rows: list[dict] = []
 
     for account in accounts:
         account_id = account.account_id
@@ -252,6 +287,7 @@ def build_dataset(
             **behavioral_by_account[account_id],
             **temporal_by_account[account_id],
             **graph_by_account[account_id],
+            **entity_by_account[account_id],
         }
 
         # Remove duplicate account_id keys from
@@ -261,6 +297,8 @@ def build_dataset(
         rows.append(row)
 
     dataset = pd.DataFrame(rows)
+
+    
 
     # --------------------------------------------------------
     # 12. Remove duplicate feature identifier columns
@@ -286,6 +324,11 @@ def build_dataset(
             "reciprocity",
             "community_size",
             "internal_degree",
+            "shared_device_count",
+            "shared_ip_count",
+            "shared_address_count",
+            "shared_payment_count",
+            "multi_signal_link_count",
         ]
     ]
 
