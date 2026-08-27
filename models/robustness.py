@@ -19,7 +19,6 @@ from models.baseline import (
     train_logistic_baseline,
 )
 
-
 DEFAULT_DATASET_PATH = Path(
     "datasets/abuse_ring_dataset.csv"
 )
