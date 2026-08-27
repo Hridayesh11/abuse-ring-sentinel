@@ -3,11 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 
 from models.baseline import (
     BEHAVIORAL_FEATURES,
@@ -15,7 +14,6 @@ from models.baseline import (
     RING_LINKAGE_FEATURES,
     load_dataset,
 )
-
 
 DEFAULT_DATASET_PATH = Path(
     "datasets/abuse_ring_dataset.csv"
