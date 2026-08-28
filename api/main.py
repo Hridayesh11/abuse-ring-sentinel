@@ -2,34 +2,36 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
-from models.baseline import (
-    FEATURE_COLUMNS,
+from models.inference import (
+    assess_account_by_id,
     load_dataset,
-    train_logistic_baseline,
+    train_inference_model,
 )
-from models.risk_demo import calculate_risk
 
 DATASET_PATH = Path("datasets/abuse_ring_dataset.csv")
 
 
 app = FastAPI(
     title="Abuse Ring Sentinel",
-    description=(
-        "Graph and entity-based abuse risk detection API"
-    ),
+    description="Graph and entity-based abuse risk detection API",
     version="1.0.0",
 )
 
 
 dataset = load_dataset(DATASET_PATH)
+model = train_inference_model(DATASET_PATH)
 
-X = dataset[FEATURE_COLUMNS]
-y = dataset["label"]
 
-model = train_logistic_baseline(X, y)
+class RiskResponse(BaseModel):
+    account_id: str
+    abuse_probability: float
+    risk_score: int
+    risk_level: str
+    decision: str
+    reasons: list[str]
 
 
 @app.get("/")
@@ -55,31 +57,30 @@ def list_accounts() -> list[dict]:
     ].to_dict(orient="records")
 
 
-@app.get("/accounts/{account_id}")
-def get_account_risk(account_id: str) -> dict:
-    account_rows = dataset[
-        dataset["account_id"] == account_id
-    ]
-
-    if account_rows.empty:
+@app.get(
+    "/accounts/{account_id}",
+    response_model=RiskResponse,
+)
+def get_account_risk(
+    account_id: str,
+) -> RiskResponse:
+    try:
+        assessment = assess_account_by_id(
+            model,
+            dataset,
+            account_id,
+        )
+    except ValueError as exc:
         raise HTTPException(
             status_code=404,
-            detail=f"Account not found: {account_id}",
-        )
+            detail=str(exc),
+        ) from exc
 
-    row = account_rows.iloc[0]
-
-    features = pd.DataFrame(
-        [row[FEATURE_COLUMNS].to_dict()]
+    return RiskResponse(
+        account_id=assessment.account_id,
+        abuse_probability=assessment.abuse_probability,
+        risk_score=assessment.risk_score,
+        risk_level=assessment.risk_level,
+        decision=assessment.decision,
+        reasons=list(assessment.reasons),
     )
-
-    probability = float(
-        model.predict_proba(features)[0, 1]
-    )
-
-    risk = calculate_risk(
-        row,
-        probability,
-    )
-
-    return risk
