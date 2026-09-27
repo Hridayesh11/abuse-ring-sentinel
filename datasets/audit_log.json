@@ -1,0 +1,106 @@
+[
+  {
+    "timestamp": "2026-09-03T21:21:16.337704+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "escalated",
+    "previous_status": "dismissed",
+    "new_status": "escalated"
+  },
+  {
+    "timestamp": "2026-09-03T21:21:16.367399+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "reviewed",
+    "previous_status": "dismissed",
+    "new_status": "reviewed"
+  },
+  {
+    "timestamp": "2026-09-03T21:21:16.387518+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "open",
+    "previous_status": "reviewed",
+    "new_status": null
+  },
+  {
+    "timestamp": "2026-09-03T21:22:09.217285+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00002",
+    "action": "reviewed",
+    "previous_status": null,
+    "new_status": "reviewed"
+  },
+  {
+    "timestamp": "2026-09-05T06:36:25.739218+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00002",
+    "action": "reviewed",
+    "previous_status": "reviewed",
+    "new_status": "reviewed"
+  },
+  {
+    "timestamp": "2026-09-24T16:46:37.279371+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "escalated",
+    "previous_status": "dismissed",
+    "new_status": "escalated"
+  },
+  {
+    "timestamp": "2026-09-24T16:46:37.330371+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "reviewed",
+    "previous_status": "dismissed",
+    "new_status": "reviewed"
+  },
+  {
+    "timestamp": "2026-09-24T16:46:37.352296+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "open",
+    "previous_status": "reviewed",
+    "new_status": null
+  },
+  {
+    "timestamp": "2026-09-27T05:25:03.656477+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "restricted",
+    "previous_status": "dismissed",
+    "new_status": "restricted",
+    "notes": "Restricted account pending ring review for Razorpay Demo verification.",
+    "investigator": "Lead Risk Analyst - Buildathon Ops"
+  },
+  {
+    "timestamp": "2026-09-27T05:25:59.817488+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "escalated",
+    "previous_status": "restricted",
+    "new_status": "escalated",
+    "notes": null,
+    "investigator": "Lead Risk Analyst"
+  },
+  {
+    "timestamp": "2026-09-27T05:25:59.851193+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "reviewed",
+    "previous_status": "restricted",
+    "new_status": "reviewed",
+    "notes": null,
+    "investigator": "Lead Risk Analyst"
+  },
+  {
+    "timestamp": "2026-09-27T05:25:59.878440+00:00",
+    "event_type": "case_action",
+    "account_id": "ACC_00001",
+    "action": "open",
+    "previous_status": "reviewed",
+    "new_status": null,
+    "notes": null,
+    "investigator": "Lead Risk Analyst"
+  }
+]

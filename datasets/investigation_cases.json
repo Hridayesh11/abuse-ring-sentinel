@@ -1,0 +1,12 @@
+{
+  "ACC_00001": {
+    "status": "restricted",
+    "updated_at": "2026-09-27T05:25:03.655466+00:00",
+    "notes": "Restricted account pending ring review for Razorpay Demo verification.",
+    "investigator": "Lead Risk Analyst - Buildathon Ops"
+  },
+  "ACC_00002": {
+    "status": "reviewed",
+    "updated_at": "2026-09-05T06:36:25.716714+00:00"
+  }
+}
