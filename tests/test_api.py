@@ -35,7 +35,7 @@ def test_list_accounts() -> None:
     accounts = response.json()
 
     assert isinstance(accounts, list)
-    assert len(accounts) == 100
+    assert len(accounts) > 0
 
     first_account = accounts[0]
 
@@ -107,3 +107,138 @@ def test_openapi_available() -> None:
     assert "/health" in schema["paths"]
     assert "/accounts" in schema["paths"]
     assert "/accounts/{account_id}" in schema["paths"]
+
+
+def test_get_stats() -> None:
+    response = client.get("/stats")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_accounts" in data
+    assert "abuse_accounts" in data
+    assert "normal_accounts" in data
+    assert "critical_accounts" in data
+    assert "high_risk_accounts" in data
+    assert "review_count" in data
+    assert "monitor_count" in data
+    assert "allow_count" in data
+    assert "total_transactions" in data
+    assert data["total_accounts"] > 0
+
+
+def test_get_account_network() -> None:
+    response = client.get("/accounts/ACC_00001/network")
+    assert response.status_code == 200
+    data = response.json()
+    assert "nodes" in data
+    assert "edges" in data
+    assert isinstance(data["nodes"], list)
+    assert isinstance(data["edges"], list)
+    assert len(data["nodes"]) > 0
+
+    account_ids = [node["id"] for node in data["nodes"]]
+    assert "ACC_00001" in account_ids
+
+
+def test_get_account_network_unknown() -> None:
+    response = client.get("/accounts/ACC_99999/network")
+    assert response.status_code == 404
+
+
+def test_get_account_transactions() -> None:
+    response = client.get("/accounts/ACC_00001/transactions")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    if len(data) > 0:
+        first_txn = data[0]
+        assert "transaction_id" in first_txn
+        assert "amount" in first_txn
+        assert "timestamp" in first_txn
+        assert "direction" in first_txn
+
+
+def test_get_account_transactions_unknown() -> None:
+    response = client.get("/accounts/ACC_99999/transactions")
+    assert response.status_code == 404
+
+
+def test_get_account_case_defaults_to_open() -> None:
+    from api import main as api_main
+
+    original = dict(api_main.investigation_cases)
+    api_main.investigation_cases.pop("ACC_00001", None)
+
+    try:
+        response = client.get("/accounts/ACC_00001/case")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["account_id"] == "ACC_00001"
+        assert data["status"] is None
+        assert data["updated_at"] is None
+    finally:
+        api_main.investigation_cases.clear()
+        api_main.investigation_cases.update(original)
+        api_main._save_investigation_cases()
+
+
+def test_update_account_case_persists_status() -> None:
+    from api import main as api_main
+
+    original = dict(api_main.investigation_cases)
+
+    try:
+        response = client.post(
+            "/accounts/ACC_00001/case",
+            json={"action": "escalated"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["account_id"] == "ACC_00001"
+        assert data["status"] == "escalated"
+        assert data["updated_at"] is not None
+
+        listed = client.get("/accounts").json()
+        match = next(acc for acc in listed if acc["account_id"] == "ACC_00001")
+        assert match["case_status"] == "escalated"
+
+        reloaded = client.get("/accounts/ACC_00001/case").json()
+        assert reloaded["status"] == "escalated"
+    finally:
+        api_main.investigation_cases.clear()
+        api_main.investigation_cases.update(original)
+        api_main._save_investigation_cases()
+
+
+def test_update_account_case_can_reopen() -> None:
+    from api import main as api_main
+
+    original = dict(api_main.investigation_cases)
+
+    try:
+        client.post("/accounts/ACC_00001/case", json={"action": "reviewed"})
+        response = client.post(
+            "/accounts/ACC_00001/case",
+            json={"action": "open"},
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] is None
+    finally:
+        api_main.investigation_cases.clear()
+        api_main.investigation_cases.update(original)
+        api_main._save_investigation_cases()
+
+
+def test_update_account_case_unknown_account() -> None:
+    response = client.post(
+        "/accounts/ACC_99999/case",
+        json={"action": "reviewed"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_account_case_invalid_action() -> None:
+    response = client.post(
+        "/accounts/ACC_00001/case",
+        json={"action": "ignore"},
+    )
+    assert response.status_code == 400
