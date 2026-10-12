@@ -1,12 +1,30 @@
-import { Routes, Route, NavLink } from 'react-router-dom';
-import { ShieldAlert, LayoutDashboard, Search, Cpu, Activity } from 'lucide-react';
+
+import { Route, Routes, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ShieldAlert, LayoutDashboard, Search, Cpu, Activity, LogOut } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Investigation from './pages/Investigation';
+import Login from './pages/Login';
+import ProtectedRoute from './auth/ProtectedRoute';
+import { supabase } from './lib/supabase';
+
 
 function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+  const navigate = useNavigate();
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error.message);
+      alert('Error signing out. Please try again.');
+      return;
+    }
+    navigate('/login', {replace: true});
+  };
   return (
     <div className="app-container">
-      <aside className="sidebar">
+      {!isLoginPage && (
+        <aside className="sidebar">
         {/* Brand Header */}
         <div className="sidebar-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.375rem', paddingBottom: '1.25rem' }}>
           <div className="flex items-center gap-2">
@@ -41,8 +59,8 @@ function App() {
               Navigation
             </p>
 
-            <NavLink 
-              to="/" 
+            <NavLink
+              to="/"
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               end
             >
@@ -50,8 +68,8 @@ function App() {
               Executive Dashboard
             </NavLink>
 
-            <NavLink 
-              to="/investigation" 
+            <NavLink
+              to="/investigation"
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
               <Search size={16} />
@@ -84,16 +102,49 @@ function App() {
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle, #152030)' }}>
               v1.0.0 · Graph Entity Sentinel
             </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                width: '100%',
+                marginTop: '1rem',
+                padding: '0.65rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
           </div>
         </nav>
       </aside>
-      
+      )}
+
       <main className="main-content">
+
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/investigation" element={<Investigation />} />
-          <Route path="/investigation/:accountId" element={<Investigation />} />
+          <Route path="/login" element={<Login />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/investigation" element={<Investigation />} />
+            <Route
+              path="/investigation/:accountId"
+              element={<Investigation />}
+            />
+          </Route>
         </Routes>
+
       </main>
     </div>
   );

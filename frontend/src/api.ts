@@ -1,3 +1,31 @@
+import { supabase } from "./lib/supabase";
+const API_BASE_URL = "http://127.0.0.1:8000";
+
+async function authenticatedFetch(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error(`Unable to get session: ${error.message}`);
+  }
+
+  if (!session?.access_token) {
+    throw new Error("You are not logged in. Please sign in again.");
+  }
+
+  const headers = new Headers(options.headers);
+  headers.set("Authorization", `Bearer ${session.access_token}`);
+
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+}
 const API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
@@ -185,7 +213,7 @@ export type CaseAction =
   | "open";
 
 export async function fetchRings(): Promise<AbuseRing[]> {
-  const res = await fetch(`${API_BASE}/rings`);
+  const res = await authenticatedFetch("/rings");
 
   if (!res.ok) {
     throw new Error("Failed to fetch abuse rings");
@@ -195,7 +223,7 @@ export async function fetchRings(): Promise<AbuseRing[]> {
 }
 
 export async function fetchStats(): Promise<Stats> {
-  const res = await fetch(`${API_BASE}/stats`);
+  const res = await authenticatedFetch("/stats");
 
   if (!res.ok) {
     throw new Error("Failed to fetch stats");
@@ -205,7 +233,7 @@ export async function fetchStats(): Promise<Stats> {
 }
 
 export async function fetchAccounts(): Promise<Account[]> {
-  const res = await fetch(`${API_BASE}/accounts`);
+  const res = await authenticatedFetch("/accounts");
 
   if (!res.ok) {
     throw new Error("Failed to fetch accounts");
@@ -235,8 +263,8 @@ export async function fetchAccountRisk(
 export async function fetchAccountNetwork(
   accountId: string,
 ): Promise<Network> {
-  const res = await fetch(
-    `${API_BASE}/accounts/${accountId}/network`,
+  const res = await authenticatedFetch(
+    `/accounts/${accountId}/network`,
   );
 
   if (!res.ok) {
@@ -249,8 +277,8 @@ export async function fetchAccountNetwork(
 export async function fetchAccountTransactions(
   accountId: string,
 ): Promise<Transaction[]> {
-  const res = await fetch(
-    `${API_BASE}/accounts/${accountId}/transactions`,
+  const res = await authenticatedFetch(
+    `/accounts/${accountId}/transactions`,
   );
 
   if (!res.ok) {
@@ -285,8 +313,8 @@ export async function fetchAccountCase(
 export async function fetchAccountInvestigation(
   accountId: string,
 ): Promise<InvestigationContext> {
-  const res = await fetch(
-    `${API_BASE}/accounts/${accountId}/investigation`,
+  const res = await authenticatedFetch(
+    `/accounts/${accountId}/investigation`,
   );
 
   if (!res.ok) {
@@ -308,8 +336,8 @@ export async function updateAccountCase(
   notes?: string,
   investigator?: string,
 ): Promise<InvestigationCase> {
-  const res = await fetch(
-    `${API_BASE}/accounts/${accountId}/case`,
+  const res = await authenticatedFetch(
+    `/accounts/${accountId}/case`,
     {
       method: "POST",
       headers: {

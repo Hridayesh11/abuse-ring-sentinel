@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+import jwt
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from jwt import PyJWKClient
+from jwt.exceptions import InvalidTokenError
 from pydantic import BaseModel
 
 from audit.audit_log import record_case_action
@@ -17,15 +23,66 @@ from investigation.timeline import (
     timeline_to_dict,
 )
 
-from audit.audit_log import (
-    get_account_audit_events,
-    record_case_action,
-)
+from audit.audit_log import get_account_audit_events
 from models.inference import (
     assess_all_accounts,
     load_dataset,
     train_inference_model,
 )
+
+
+# ---------------------------------------------------------------------------
+# Supabase authentication configuration
+# ---------------------------------------------------------------------------
+
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_ISSUER = f"{SUPABASE_URL}/auth/v1"
+
+jwks_client = (
+    PyJWKClient(
+        f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+    )
+    if SUPABASE_URL
+    else None
+)
+
+
+def verify_supabase_access_token(token: str) -> dict:
+    """Verify a Supabase access token and return its claims."""
+    header = jwt.get_unverified_header(token)
+    algorithm = header.get("alg")
+
+    if algorithm == "HS256":
+        # Legacy Supabase projects may use a symmetric JWT secret.
+        jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        if not jwt_secret:
+            raise InvalidTokenError(
+                "Missing server-side Supabase JWT secret"
+            )
+        signing_key = jwt_secret
+        allowed_algorithms = ["HS256"]
+    elif algorithm in {"ES256", "RS256"}:
+        if jwks_client is None:
+            raise InvalidTokenError(
+                "Supabase URL is not configured"
+            )
+        signing_key = jwks_client.get_signing_key_from_jwt(token).key
+        allowed_algorithms = [algorithm]
+    else:
+        raise InvalidTokenError("Unsupported JWT signing algorithm")
+
+    claims = jwt.decode(
+        token,
+        signing_key,
+        algorithms=allowed_algorithms,
+        audience="authenticated",
+        issuer=SUPABASE_ISSUER,
+    )
+    if not claims.get("sub"):
+        raise InvalidTokenError("Token has no user ID")
+    return claims
 
 
 DATASET_PATH = Path("datasets/abuse_ring_dataset.csv")
@@ -53,11 +110,54 @@ app = FastAPI(
 # Enable CORS for the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Require a valid Supabase access token for protected API routes
+# ---------------------------------------------------------------------------
+
+PUBLIC_PATHS = {"/", "/health", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def enforce_supabase_auth(request: Request, call_next):
+    # Allow browser CORS preflight requests and public health/documentation routes.
+    if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    if not SUPABASE_URL:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Supabase authentication is not configured"},
+        )
+
+    authorization = request.headers.get("Authorization", "")
+    scheme, separator, token = authorization.partition(" ")
+    if not separator or scheme.lower() != "bearer" or not token.strip():
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Authentication required"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        verify_supabase_access_token(token.strip())
+    except Exception:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Invalid or expired access token"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return await call_next(request)
 
 
 # ---------------------------------------------------------------------------
@@ -975,3 +1075,17 @@ def get_account_investigation(
     response["audit_history"] = audit_history
 
     return response
+
+# Ensure CORS headers are added even to authentication errors.
+from starlette.middleware.cors import CORSMiddleware as OuterCORSMiddleware
+
+app = OuterCORSMiddleware(
+    app=app,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

@@ -248,3 +248,101 @@ select.search-input option { background-color: var(--bg-surface); color: var(--t
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #080d16;
+  color: #e5e7eb;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  border: 1px solid #263244;
+  border-radius: 16px;
+  background: #101827;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  color: #f87171;
+}
+
+.auth-brand h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #f3f4f6;
+}
+
+.auth-brand p,
+.auth-subtitle {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.auth-card form {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.auth-card input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #0b1220;
+  color: #f9fafb;
+}
+
+.auth-card form > button {
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #dc2626;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-card button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.auth-message {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: #fbbf24;
+}
+
+.auth-switch {
+  margin-top: 24px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.auth-link {
+  border: 0;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #080d16;
+  color: #e5e7eb;
+}
